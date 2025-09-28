@@ -114,7 +114,8 @@ async def trigger_minting(request: MintRequest):
         })
 
         signed_tx = w3.eth.account.sign_transaction(tx, private_key=minter_account.key)
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        # YEH LINE SAHI HAI
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         w3.eth.wait_for_transaction_receipt(tx_hash)
 
         submission['status'] = 'approved'

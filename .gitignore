@@ -1,0 +1,23 @@
+# Python/Backend dependencies
+/backend/venv/
+/backend/__pycache__/
+/backend/.pytest_cache/
+
+# Node.js/Frontend dependencies
+/field-app-v2/node_modules/
+/verifier-dashboard/node_modules/
+/verifier-dashboard/build/
+.expo/
+npm-debug.log
+yarn-error.log
+
+# Hardhat cache and artifacts
+/hardhat-project/cache/
+/hardhat-project/artifacts/
+/hardhat-project/typechain-types/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+*.env
