@@ -1,0 +1,139 @@
+🟦 Blue Veracity Protocol - A Blockchain-Based Carbon Registry (SIH POC)
+Welcome to the Proof of Concept for the Blue Veracity Protocol, a decentralized system designed for the Smart India Hackathon. This project introduces a transparent, immutable, and verifiable registry for Blue Carbon Credits, leveraging blockchain technology to address critical challenges in the carbon market like fraud, double-counting, and lack of transparency.
+
+📋 Table of Contents
+Architectural Overview
+Core Features
+Technology Stack
+Project Setup Guide
+1. Environment Configuration
+2. Getting API Keys & Credentials
+3. Environment Variable Setup
+Build & Run Instructions
+Part A: Smart Contract
+Part B: Backend Server
+Part C: Mobile App
+Part D: Web Dashboard
+🚀 Launch Control (Quick Start)
+Troubleshooting Common Issues
+🏛️ Architectural Overview
+The protocol operates on a robust and decentralized architecture ensuring data integrity and user accessibility.
+
+Mobile App (Field User) → Backend API (FastAPI) → IPFS (Pinata) → Smart Contract (Polygon) ↑ ↓ Web Dashboard (Verifier) → Backend API (FastAPI) → Smart Contract (Polygon)
+
+Submission: A Field User captures geotagged evidence via the mobile app.
+Processing: The Backend API receives the data, uploads the image to IPFS for immutable storage, and records the submission details.
+Verification: A Verifier reviews the pending submission on the Web Dashboard and approves it.
+Minting: Upon approval, the Backend triggers the safeMint function on the smart contract.
+Record: The smart contract mints a unique ERC721 token (NFT) representing the carbon credit directly to the Field User's wallet on the Polygon Amoy Testnet.
+✨ Core Features
+This Proof of Concept successfully demonstrates:
+
+Decentralized Evidence Storage: Geotagged images are stored on IPFS, making them tamper-proof.
+Immutable Ledger: A custom ERC721 smart contract on the Polygon blockchain acts as a transparent registry for all carbon credits.
+Role-Based Interaction: Separate, user-friendly interfaces for Field Users (mobile) and Verifiers (web).
+End-to-End Workflow: A complete, functional loop from evidence submission to the final minting of a unique Carbon Credit NFT.
+🛠️ Technology Stack
+Component	Technologies & Libraries Used
+Smart Contract	Solidity, Hardhat (v2 - Stable), OpenZeppelin, Ethers.js, Polygon (Amoy Testnet)
+Backend	Python 3.8+, FastAPI, Web3.py, Uvicorn, Pinata (for IPFS)
+Mobile App	React Native, Expo SDK, Expo Image Picker, Expo Location
+Web Dashboard	React.js, Ethers.js v6, CSS
+Environment	Node.js (v18 LTS), nvm, Git, Visual Studio Code
+🔧 Project Setup Guide
+This section details the entire setup process, including overcoming common environment issues.
+
+1. Environment Configuration
+Node.js: It is crucial to use a Node.js LTS version. We recommend v18. Use nvm (Node Version Manager) to manage versions easily.
+nvm install 18
+nvm use 18
+Python: Ensure you have Python 3.8+ installed and can create virtual environments.
+MetaMask: Install the MetaMask browser extension for wallet interactions.
+2. Getting API Keys & Credentials
+You will need the following secrets from third-party services:
+
+PINATA_API_KEY & PINATA_API_SECRET:
+
+Sign up for a free account at Pinata.cloud.
+Navigate to the "API Keys" section and create a new key.
+AMOY_RPC_URL:
+
+Sign up for a free account at Alchemy.com.
+Create a new App, select the Polygon chain and the Amoy network.
+Click "View Key" to get your HTTPS RPC URL.
+Wallet Private Keys:
+
+PRIVATE_KEY (for deploying): Export the private key from the MetaMask account you will use to deploy the contract.
+MINTER_WALLET_PRIVATE_KEY (for backend): Create a separate, new MetaMask account to be used exclusively by the backend for minting. Export its private key and fund it with test tokens from an Amoy Faucet.
+3. Environment Variable Setup
+For the Smart Contract: In the /smart-contract directory, create a file named .env and add your keys:
+AMOY_RPC_URL="YOUR_ALCHEMY_AMOY_RPC_URL"
+PRIVATE_KEY="YOUR_METAMASK_DEPLOYER_PRIVATE_KEY"
+For the Backend: Open /backend/main.py and fill in the configuration section with the secrets obtained above.
+🏗️ Build & Run Instructions
+Follow these steps in order. Each component should be run in a separate terminal.
+
+Part A: Smart Contract (Hardhat)
+This stable setup avoids the dependency conflicts encountered with Hardhat v3 Beta.
+
+# 1. Navigate to the smart-contract directory
+cd smart-contract
+
+# 2. Install dependencies with a stable Hardhat version
+npm init -y
+npm install --save-dev hardhat@^2.22.6 @nomicfoundation/hardhat-toolbox@^5.0.0 --legacy-peer-deps
+npm install @openzeppelin/contracts dotenv
+
+# 3. Initialize Hardhat Project
+npx hardhat 
+# -> Select "Create a JavaScript project" and accept defaults
+
+# 4. Add your contract, deploy script, and config files (as detailed in our chat)
+
+# 5. Compile the contract
+npx hardhat compile
+
+# 6. Deploy to Amoy Testnet
+npx hardhat run scripts/deploy.js --network amoy
+
+Backend
+
+# 1. Navigate to the backend directory
+cd backend
+
+# 2. Create and activate a Python virtual environment
+python -m venv venv
+venv\Scripts\activate  # On Windows
+
+# 3. Install Python dependencies
+pip install "fastapi[all]" uvicorn python-multipart web3 requests
+
+# 4. Run the API server
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+
+ReactNative
+# 1. Navigate to the backend directory
+cd backend
+
+# 2. Create and activate a Python virtual environment
+python -m venv venv
+venv\Scripts\activate  # On Windows
+
+# 3. Install Python dependencies
+pip install "fastapi[all]" uvicorn python-multipart web3 requests
+
+# 4. Run the API server
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+Web dashboard
+
+# 1. Navigate to the web dashboard directory
+cd verifier-dashboard
+
+# 2. Install dependencies, including the correct Ethers version
+npm install
+npm install ethers
+
+# 3. Start the dashboard
+npm start
