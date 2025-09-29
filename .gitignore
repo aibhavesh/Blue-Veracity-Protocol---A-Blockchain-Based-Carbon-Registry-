@@ -1,23 +1,49 @@
-# Python/Backend dependencies
-/backend/venv/
-/backend/__pycache__/
-/backend/.pytest_cache/
+# Python / Backend
+backend/venv/
+backend/__pycache__/
+backend/.pytest_cache/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
 
-# Node.js/Frontend dependencies
-/field-app-v2/node_modules/
-/verifier-dashboard/node_modules/
-/verifier-dashboard/build/
+# Node.js / Frontend
+field-app-v2/node_modules/
+verifier-dashboard/node_modules/
+verifier-dashboard/build/
 .expo/
-npm-debug.log
-yarn-error.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Hardhat cache and artifacts
-/hardhat-project/cache/
-/hardhat-project/artifacts/
-/hardhat-project/typechain-types/
+hardhat-project/cache/
+hardhat-project/artifacts/
+hardhat-project/typechain-types/
 
-# IDE and OS files
+# Env and secrets
+*.env
+*.env.* 
+.env.local
+.envrc
+
+# IDE / Editor
 .vscode/
 .idea/
+*.code-workspace
+
+# OS files
 .DS_Store
-*.env
+Thumbs.db
+Desktop.ini
+
+# Logs and coverage
+*.log
+logs/
+coverage/
+coverage.lcov
+
+# Misc build outputs
+dist/
+build/
+.tmp/
