@@ -1,20 +1,30 @@
 {
-  "name": "smart-contract",
+  "name": "blue-carbon-credit-contract",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Blue Veracity Protocol - Blockchain-Based Blue Carbon Credit Registry Smart Contract",
+  "main": "scripts/deploy.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js --network amoy",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network polygon",
+    "verify": "hardhat verify --network amoy",
+    "local": "hardhat node"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": ["blockchain", "carbon-credits", "erc721", "polygon", "ethereum"],
+  "author": "Blue Veracity Protocol Team",
+  "license": "MIT",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.6"
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "hardhat": "^2.22.6",
+    "hardhat-gas-reporter": "^1.0.8",
+    "solidity-coverage": "^0.8.0"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",
     "dotenv": "^17.2.2"
   }
 }
+

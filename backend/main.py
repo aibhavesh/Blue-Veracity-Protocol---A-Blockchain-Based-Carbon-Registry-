@@ -1,30 +1,38 @@
-# main.py
+"""
+Blue Veracity Protocol - FastAPI Backend
+Trusted Oracle between Field Data and Blockchain
+"""
 
-import os
-import json
-import requests
-from fastapi import FastAPI, File, Form, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from web3 import Web3
-from pydantic import BaseModel
+import logging
+from datetime import datetime
 
-# --- CONFIGURATION ---
-# Aapke details jo aapne daale the
-PINATA_API_KEY = "ab4d7865401222671bda"
-PINATA_API_SECRET = "4fadfd1a16fbe2a97dca6d6dad0762721a4316304214a5b0f9efd8012d313c1f"
-POLYGON_MUMBAI_RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/E92vsqVNW2APP7JQbQyDq"
-MINTER_WALLET_PRIVATE_KEY = "ac19f2255785055b35615a1a1b5b27b993214736561f38a531f03d518066312a"
+from models import (
+    CarbonCreditSubmission,
+    SubmissionResponse,
+    PendingSubmission,
+    VerificationResponse,
+)
+from database import init_db, SessionLocal
+from ipfs import upload_to_pinata
+from blockchain import mint_carbon_credit, get_contract_instance
 
-# Maine yeh neeche ke do (2) fields aapke liye bhar diye hain
-CONTRACT_ADDRESS = "0xc49339a25A625812E694056214841a40a233e64b"
-CONTRACT_ABI = [{"inputs": [], "stateMutability": "nonpayable", "type": "constructor"}, {"inputs": [{"internalType": "address", "name": "owner", "type": "address"}], "name": "OwnableInvalidOwner", "type": "error"}, {"inputs": [{"internalType": "address", "name": "account", "type": "address"}], "name": "OwnableUnauthorizedAccount", "type": "error"}, {"anonymous": False, "inputs": [{"indexed": True, "internalType": "address", "name": "owner", "type": "address"}, {"indexed": True, "internalType": "address", "name": "approved", "type": "address"}, {"indexed": True, "internalType": "uint256", "name": "tokenId", "type": "uint256"}], "name": "Approval", "type": "event"}, {"anonymous": False, "inputs": [{"indexed": True, "internalType": "address", "name": "owner", "type": "address"}, {"indexed": True, "internalType": "address", "name": "operator", "type": "address"}, {"indexed": False, "internalType": "bool", "name": "approved", "type": "bool"}], "name": "ApprovalForAll", "type": "event"}, {"anonymous": False, "inputs": [{"indexed": True, "internalType": "address", "name": "previousOwner", "type": "address"}, {"indexed": True, "internalType": "address", "name": "newOwner", "type": "address"}], "name": "OwnershipTransferred", "type": "event"}, {"anonymous": False, "inputs": [{"indexed": True, "internalType": "address", "name": "from", "type": "address"}, {"indexed": True, "internalType": "address", "name": "to", "type": "address"}, {"indexed": True, "internalType": "uint256", "name": "tokenId", "type": "uint256"}], "name": "Transfer", "type": "event"}, {"inputs": [{"internalType": "address", "name": "to", "type": "address"}, {"internalType": "uint256", "name": "tokenId", "type": "uint256"}], "name": "approve", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "address", "name": "owner", "type": "address"}], "name": "balanceOf", "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}], "name": "getApproved", "outputs": [{"internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "address", "name": "owner", "type": "address"}, {"internalType": "address", "name": "operator", "type": "address"}], "name": "isApprovedForAll", "outputs": [{"internalType": "bool", "name": "", "type": "bool"}], "stateMutability": "view", "type": "function"}, {"inputs": [], "name": "name", "outputs": [{"internalType": "string", "name": "", "type": "string"}], "stateMutability": "view", "type": "function"}, {"inputs": [], "name": "owner", "outputs": [{"internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}], "name": "ownerOf", "outputs": [{"internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function"}, {"inputs": [], "name": "renounceOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "address", "name": "to", "type": "address"}, {"internalType": "string", "name": "ipfsHash", "type": "string"}], "name": "safeMint", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "address", "name": "from", "type": "address"}, {"internalType": "address", "name": "to", "type": "address"}, {"internalType": "uint256", "name": "tokenId", "type": "uint256"}], "name": "safeTransferFrom", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "address", "name": "from", "type": "address"}, {"internalType": "address", "name": "to", "type": "address"}, {"internalType": "uint256", "name": "tokenId", "type": "uint256"}, {"internalType": "bytes", "name": "data", "type": "bytes"}], "name": "safeTransferFrom", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "address", "name": "operator", "type": "address"}, {"internalType": "bool", "name": "approved", "type": "bool"}], "name": "setApprovalForAll", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "bytes4", "name": "interfaceId", "type": "bytes4"}], "name": "supportsInterface", "outputs": [{"internalType": "bool", "name": "", "type": "bool"}], "stateMutability": "view", "type": "function"}, {"inputs": [], "name": "symbol", "outputs": [{"internalType": "string", "name": "", "type": "string"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}], "name": "tokenURI", "outputs": [{"internalType": "string", "name": "", "type": "string"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "address", "name": "from", "type": "address"}, {"internalType": "address", "name": "to", "type": "address"}, {"internalType": "uint256", "name": "tokenId", "type": "uint256"}], "name": "transferFrom", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "address", "name": "newOwner", "type": "address"}], "name": "transferOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function"}]
-
-# --- END CONFIGURATION ---
-
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
-app = FastAPI(title="Blue Veracity Protocol API")
+app = FastAPI(
+    title="Blue Veracity Protocol Backend",
+    description="Blockchain-based blue carbon credit registry",
+    version="1.0.0",
+)
 
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,97 +41,341 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory "database"
-db = {}
-submission_counter = 0
 
-# Setup Web3
-w3 = Web3(Web3.HTTPProvider(POLYGON_MUMBAI_RPC_URL))
-minter_account = w3.eth.account.from_key(MINTER_WALLET_PRIVATE_KEY)
-contract = w3.eth.contract(address=Web3.to_checksum_address(CONTRACT_ADDRESS), abi=CONTRACT_ABI)
-
-
-# --- API Endpoints ---
-@app.get("/")
-def read_root():
-    return {"message": "Blue Veracity Protocol API is running"}
-
-@app.post("/submit_evidence")
-async def submit_evidence(
-    file: UploadFile = File(...),
-    latitude: float = Form(...),
-    longitude: float = Form(...),
-    walletAddress: str = Form(...)
-):
-    global submission_counter
-    
-    files = {'file': (file.filename, await file.read(), file.content_type)}
-    headers = {'pinata_api_key': PINATA_API_KEY, 'pinata_secret_api_key': PINATA_API_SECRET}
-
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database and verify blockchain connection"""
     try:
-        response = requests.post("https://api.pinata.cloud/pinning/pinFileToIPFS", files=files, headers=headers)
-        response.raise_for_status()
-        image_ipfs_hash = response.json()['IpfsHash']
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Failed to upload to IPFS: {e}")
+        init_db()
+        logger.info("✅ Database initialized")
 
-    submission_counter += 1
-    db[submission_counter] = {
-        "id": submission_counter,
-        "walletAddress": walletAddress,
-        "latitude": latitude,
-        "longitude": longitude,
-        "ipfsHash": image_ipfs_hash,
-        "status": "pending",
-        "txHash": None
+        contract = get_contract_instance()
+        if contract:
+            logger.info("✅ Smart contract connection verified")
+        else:
+            logger.error("❌ Failed to connect to smart contract")
+    except Exception as e:
+        logger.error(f"❌ Startup error: {str(e)}")
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "Blue Veracity Protocol Backend",
     }
-    
-    print(f"New submission received: {db[submission_counter]}")
-    return {"message": "Submission received, awaiting verification.", "submissionId": submission_counter, "ipfsHash": image_ipfs_hash}
 
 
-@app.get("/get_pending_submissions")
-async def get_pending_submissions():
-    pending = [sub for sub in db.values() if sub['status'] == 'pending']
-    return pending
+@app.post("/submit", response_model=SubmissionResponse)
+async def submit_carbon_credit(
+    file: UploadFile = File(...),
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    wallet_address: str = Query(...),
+    credits_amount: float = Query(..., gt=0),
+):
+    """
+    Submit a carbon credit for verification
 
-
-class MintRequest(BaseModel):
-    submissionId: int
-    verifierAddress: str
-
-@app.post("/trigger_minting")
-async def trigger_minting(request: MintRequest):
-    submission = db.get(request.submissionId)
-
-    if not submission:
-        raise HTTPException(status_code=404, detail="Submission not found.")
-    if submission['status'] != 'pending':
-        raise HTTPException(status_code=400, detail="Submission has already been processed.")
+    **Parameters:**
+    - `file`: Image evidence (geotagged)
+    - `latitude`: GPS latitude (-90 to 90)
+    - `longitude`: GPS longitude (-180 to 180)
+    - `wallet_address`: Field user's blockchain wallet
+    - `credits_amount`: Metric tons of CO2e
+    """
+    db = SessionLocal()
 
     try:
-        nonce = w3.eth.get_transaction_count(minter_account.address)
-        tx = contract.functions.safeMint(
-            Web3.to_checksum_address(submission['walletAddress']),
-            submission['ipfsHash']
-        ).build_transaction({
-            'from': minter_account.address,
-            'nonce': nonce,
-            'gas': 300000,
-            'gasPrice': w3.eth.gas_price
-        })
+        logger.info(
+            f"📸 New submission from {wallet_address} at ({latitude}, {longitude})"
+        )
 
-        signed_tx = w3.eth.account.sign_transaction(tx, private_key=minter_account.key)
-        # YEH LINE SAHI HAI
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-        w3.eth.wait_for_transaction_receipt(tx_hash)
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="File must be an image")
 
-        submission['status'] = 'approved'
-        submission['txHash'] = tx_hash.hex()
-        
-        print(f"Minting successful for submission {request.submissionId}. Tx: {tx_hash.hex()}")
-        return {"message": "Minting successful!", "transactionHash": tx_hash.hex()}
+        file_content = await file.read()
+        if len(file_content) == 0:
+            raise HTTPException(status_code=400, detail="File is empty")
+
+        logger.info("📤 Uploading to IPFS...")
+        ipfs_hash = await upload_to_pinata(
+            file_content=file_content,
+            file_name=file.filename,
+            latitude=latitude,
+            longitude=longitude,
+        )
+
+        if not ipfs_hash:
+            raise HTTPException(status_code=500, detail="IPFS upload failed")
+
+        from database import CarbonCreditDB
+
+        existing = (
+            db.query(CarbonCreditDB)
+            .filter(CarbonCreditDB.ipfs_hash == ipfs_hash)
+            .first()
+        )
+        if existing:
+            logger.warning(f"⚠️  Duplicate IPFS hash detected: {ipfs_hash}")
+            raise HTTPException(
+                status_code=400,
+                detail="This evidence has already been submitted",
+            )
+
+        submission = CarbonCreditSubmission(
+            wallet_address=wallet_address,
+            latitude=latitude,
+            longitude=longitude,
+            ipfs_hash=ipfs_hash,
+            credits_amount=credits_amount,
+            file_name=file.filename,
+        )
+
+        db_record = submission.to_db_model()
+        db.add(db_record)
+        db.commit()
+        db.refresh(db_record)
+
+        logger.info(
+            f"✅ Submission saved: {db_record.id} | IPFS: {ipfs_hash[:12]}..."
+        )
+
+        return SubmissionResponse(
+            submission_id=str(db_record.id),
+            status="PENDING",
+            ipfs_hash=ipfs_hash,
+            message="Submission received. Awaiting verification.",
+            timestamp=db_record.created_at.isoformat(),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Submission error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Submission failed: {str(e)}")
+    finally:
+        db.close()
+
+
+@app.get("/pending")
+async def get_pending_submissions(limit: int = Query(10, ge=1, le=100)):
+    """Get unverified carbon credit submissions"""
+    db = SessionLocal()
+
+    try:
+        from database import CarbonCreditDB
+
+        pending = (
+            db.query(CarbonCreditDB)
+            .filter(CarbonCreditDB.status == "PENDING")
+            .order_by(CarbonCreditDB.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+
+        submissions = [
+            PendingSubmission(
+                submission_id=str(sub.id),
+                wallet_address=sub.wallet_address,
+                latitude=sub.latitude,
+                longitude=sub.longitude,
+                ipfs_hash=sub.ipfs_hash,
+                credits_amount=sub.credits_amount,
+                file_name=sub.file_name,
+                created_at=sub.created_at.isoformat(),
+            )
+            for sub in pending
+        ]
+
+        logger.info(f"📋 Retrieved {len(submissions)} pending submissions")
+
+        return {
+            "count": len(submissions),
+            "submissions": submissions,
+        }
 
     except Exception as e:
-        print(f"Error during minting for submission {request.submissionId}: {e}")
-        raise HTTPException(status_code=500, detail=f"An error occurred during the minting process: {e}")
+        logger.error(f"❌ Error fetching pending submissions: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+
+@app.post("/approve/{submission_id}", response_model=VerificationResponse)
+async def approve_and_mint(submission_id: str):
+    """Verify and mint a carbon credit NFT"""
+    db = SessionLocal()
+
+    try:
+        from database import CarbonCreditDB
+        import json
+
+        submission = db.query(CarbonCreditDB).filter_by(id=submission_id).first()
+        if not submission:
+            logger.warning(f"⚠️  Submission not found: {submission_id}")
+            raise HTTPException(status_code=404, detail="Submission not found")
+
+        if submission.status != "PENDING":
+            raise HTTPException(
+                status_code=400, detail=f"Submission is already {submission.status}"
+            )
+
+        logger.info(f"🔍 Approving submission: {submission_id}")
+
+        contract = get_contract_instance()
+        if contract.functions.isDuplicateSubmission(
+            submission.ipfs_hash
+        ).call():
+            logger.error(f"❌ IPFS hash already minted: {submission.ipfs_hash}")
+            raise HTTPException(
+                status_code=400, detail="Carbon credit already minted on-chain"
+            )
+
+        metadata = {
+            "name": f"Blue Carbon Credit #{submission_id}",
+            "description": f"Verified blue carbon credit: {submission.credits_amount} metric tons CO2e",
+            "image": f"ipfs://{submission.ipfs_hash}",
+            "attributes": [
+                {"trait_type": "Latitude", "value": submission.latitude},
+                {"trait_type": "Longitude", "value": submission.longitude},
+                {"trait_type": "Carbon Credits (tCO2e)", "value": str(submission.credits_amount)},
+                {"trait_type": "Verification Date", "value": datetime.utcnow().isoformat()},
+            ],
+        }
+
+        logger.info("📤 Uploading metadata to IPFS...")
+        metadata_json = json.dumps(metadata).encode()
+        metadata_hash = await upload_to_pinata(
+            file_content=metadata_json,
+            file_name=f"metadata-{submission_id}.json",
+        )
+
+        if not metadata_hash:
+            raise HTTPException(status_code=500, detail="Metadata upload failed")
+
+        logger.info("⛓️  Minting NFT on blockchain...")
+        tx_hash, token_id = await mint_carbon_credit(
+            wallet_address=submission.wallet_address,
+            ipfs_cid=submission.ipfs_hash,
+            latitude=submission.latitude,
+            longitude=submission.longitude,
+            credits_amount=str(submission.credits_amount),
+            metadata_uri=f"ipfs://{metadata_hash}",
+        )
+
+        if not tx_hash:
+            raise HTTPException(status_code=500, detail="NFT minting failed")
+
+        submission.status = "VERIFIED"
+        submission.transaction_hash = tx_hash
+        submission.token_id = token_id
+        submission.metadata_hash = metadata_hash
+        submission.verified_at = datetime.utcnow()
+
+        db.commit()
+
+        logger.info(
+            f"✅ NFT minted! Token ID: {token_id} | TX: {tx_hash[:12]}..."
+        )
+
+        return VerificationResponse(
+            submission_id=submission_id,
+            status="VERIFIED",
+            transaction_hash=tx_hash,
+            token_id=token_id,
+            nft_uri=f"ipfs://{metadata_hash}",
+            message="Carbon credit verified and minted as NFT",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Approval error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Approval failed: {str(e)}")
+    finally:
+        db.close()
+
+
+@app.get("/submission/{submission_id}")
+async def get_submission_status(submission_id: str):
+    """Get submission status and details"""
+    db = SessionLocal()
+
+    try:
+        from database import CarbonCreditDB
+
+        submission = db.query(CarbonCreditDB).filter_by(id=submission_id).first()
+        if not submission:
+            raise HTTPException(status_code=404, detail="Submission not found")
+
+        return {
+            "submission_id": str(submission.id),
+            "status": submission.status,
+            "wallet_address": submission.wallet_address,
+            "ipfs_hash": submission.ipfs_hash,
+            "latitude": submission.latitude,
+            "longitude": submission.longitude,
+            "credits_amount": submission.credits_amount,
+            "transaction_hash": submission.transaction_hash,
+            "token_id": submission.token_id,
+            "created_at": submission.created_at.isoformat(),
+            "verified_at": submission.verified_at.isoformat() if submission.verified_at else None,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error fetching submission: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+
+@app.get("/stats")
+async def get_stats():
+    """Get platform statistics"""
+    db = SessionLocal()
+
+    try:
+        from database import CarbonCreditDB
+        from sqlalchemy import func
+
+        total = db.query(func.count(CarbonCreditDB.id)).scalar()
+        pending = (
+            db.query(func.count(CarbonCreditDB.id))
+            .filter(CarbonCreditDB.status == "PENDING")
+            .scalar()
+        )
+        verified = (
+            db.query(func.count(CarbonCreditDB.id))
+            .filter(CarbonCreditDB.status == "VERIFIED")
+            .scalar()
+        )
+        total_credits = (
+            db.query(func.sum(CarbonCreditDB.credits_amount))
+            .filter(CarbonCreditDB.status == "VERIFIED")
+            .scalar()
+        )
+
+        return {
+            "total_submissions": total,
+            "pending": pending,
+            "verified": verified,
+            "total_credits_minted": float(total_credits or 0),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error fetching stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
