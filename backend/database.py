@@ -3,6 +3,7 @@ SQLAlchemy database models and configuration
 """
 
 import os
+import uuid
 from datetime import datetime
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
@@ -37,7 +38,7 @@ class CarbonCreditDB(Base):
 
     __tablename__ = "carbon_credits"
 
-    id = Column(String, primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     wallet_address = Column(String, index=True, nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
