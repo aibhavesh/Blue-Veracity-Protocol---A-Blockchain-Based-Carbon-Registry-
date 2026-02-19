@@ -6,6 +6,7 @@ import aiohttp
 import json
 import os
 import logging
+from datetime import datetime
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,7 @@ async def upload_to_pinata(
         metadata = {
             "name": file_name,
             "keyvalues": {
-                "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
             }
         }
 
@@ -122,7 +123,7 @@ async def pin_json_to_ipfs(data: dict, name: str) -> Optional[str]:
             "pinataMetadata": {
                 "name": name,
                 "keyvalues": {
-                    "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
+                    "timestamp": datetime.utcnow().isoformat(),
                     "type": "metadata",
                 }
             },

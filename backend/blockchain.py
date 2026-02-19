@@ -17,9 +17,23 @@ POLYGON_AMOY_RPC = os.getenv(
     "POLYGON_AMOY_RPC",
     "https://rpc-amoy.polygon.technology"
 )
-CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS", "").lower()
+CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS", "")
+if CONTRACT_ADDRESS:
+    CONTRACT_ADDRESS = CONTRACT_ADDRESS.lower()
+
 BACKEND_WALLET_KEY = os.getenv("BACKEND_WALLET_KEY", "")
-CONTRACT_ABI_PATH = os.getenv("CONTRACT_ABI_PATH", "./artifacts/contracts/BlueCarbonCredit.sol/BlueCarbonCredit.json")
+CONTRACT_ABI_PATH = os.getenv(
+    "CONTRACT_ABI_PATH", 
+    "./artifacts/contracts/BlueCarbonCredit.sol/BlueCarbonCredit.json"
+)
+
+# Validate required configuration
+def validate_config():
+    """Validate that required configuration is present"""
+    if not CONTRACT_ADDRESS:
+        logger.warning("⚠️  CONTRACT_ADDRESS not set - contract operations will fail")
+    if not BACKEND_WALLET_KEY:
+        logger.warning("⚠️  BACKEND_WALLET_KEY not set - minting will fail")
 
 # Global Web3 instance
 w3 = None
@@ -32,6 +46,8 @@ def initialize_blockchain():
     global w3, contract, backend_account
 
     try:
+        validate_config()
+        
         # Initialize Web3
         w3 = Web3(Web3.HTTPProvider(POLYGON_AMOY_RPC))
 
@@ -60,7 +76,7 @@ def initialize_blockchain():
             contract_abi = get_minimal_abi()
 
         # Initialize contract
-        if CONTRACT_ADDRESS and CONTRACT_ADDRESS != "":
+        if CONTRACT_ADDRESS:
             contract = w3.eth.contract(
                 address=Web3.to_checksum_address(CONTRACT_ADDRESS),
                 abi=contract_abi
@@ -286,5 +302,6 @@ def get_minimal_abi():
     ]
 
 
-# Initialize on module import
-initialize_blockchain()
+# Don't initialize on module import - let application control initialization
+# Call initialize_blockchain() explicitly from the application startup
+# initialize_blockchain()

@@ -3,6 +3,7 @@ Blue Veracity Protocol - FastAPI Backend
 Trusted Oracle between Field Data and Blockchain
 """
 
+import os
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -32,13 +33,16 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Configure CORS
+# Configure CORS - Restrict to specific origins in production
+# For development, you can use ["http://localhost:3000"] or your specific domains
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:19006").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
@@ -50,11 +54,16 @@ async def startup_event():
         init_db()
         logger.info("✅ Database initialized")
 
-        contract = get_contract_instance()
-        if contract:
-            logger.info("✅ Smart contract connection verified")
+        # Initialize blockchain explicitly
+        from blockchain import initialize_blockchain
+        if initialize_blockchain():
+            contract = get_contract_instance()
+            if contract:
+                logger.info("✅ Smart contract connection verified")
+            else:
+                logger.error("❌ Failed to connect to smart contract")
         else:
-            logger.error("❌ Failed to connect to smart contract")
+            logger.error("❌ Blockchain initialization failed")
     except Exception as e:
         logger.error(f"❌ Startup error: {str(e)}")
 
@@ -71,10 +80,10 @@ async def health_check():
 
 @app.post("/submit", response_model=SubmissionResponse)
 async def submit_carbon_credit(
-    file: UploadFile = File(...),
+    file: UploadFile = File(..., max_length=10485760),  # 10MB max file size
     latitude: float = Query(..., ge=-90, le=90),
     longitude: float = Query(..., ge=-180, le=180),
-    wallet_address: str = Query(...),
+    wallet_address: str = Query(..., min_length=42, max_length=42, regex="^0x[a-fA-F0-9]{40}$"),
     credits_amount: float = Query(..., gt=0),
 ):
     """
@@ -270,13 +279,23 @@ async def approve_and_mint(submission_id: str):
         if not tx_hash:
             raise HTTPException(status_code=500, detail="NFT minting failed")
 
-        submission.status = "VERIFIED"
-        submission.transaction_hash = tx_hash
-        submission.token_id = token_id
-        submission.metadata_hash = metadata_hash
-        submission.verified_at = datetime.utcnow()
+        # Update database only after successful minting
+        try:
+            submission.status = "VERIFIED"
+            submission.transaction_hash = tx_hash
+            submission.token_id = token_id
+            submission.metadata_hash = metadata_hash
+            submission.verified_at = datetime.utcnow()
 
-        db.commit()
+            db.commit()
+            db.refresh(submission)
+        except Exception as db_error:
+            db.rollback()
+            logger.error(f"❌ Database update failed after minting: {str(db_error)}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"NFT minted but database update failed. TX: {tx_hash}"
+            )
 
         logger.info(
             f"✅ NFT minted! Token ID: {token_id} | TX: {tx_hash[:12]}..."

@@ -2,28 +2,36 @@
 backend/venv/
 backend/__pycache__/
 backend/.pytest_cache/
+backend/*.db
+backend/*.db-journal
 **/__pycache__/
 **/*.pyc
 **/*.pyo
 **/*.pyd
 
 # Node.js / Frontend
+mobile-app/node_modules/
 field-app-v2/node_modules/
 verifier-dashboard/node_modules/
 verifier-dashboard/build/
 .expo/
+.expo-shared/
 npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
 # Hardhat cache and artifacts
+smart-contract/cache/
+smart-contract/artifacts/
+smart-contract/typechain-types/
+smart-contract/node_modules/
 hardhat-project/cache/
 hardhat-project/artifacts/
 hardhat-project/typechain-types/
 
 # Env and secrets
 *.env
-*.env.* 
+!.env.example
 .env.local
 .envrc
 

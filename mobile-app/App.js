@@ -24,7 +24,8 @@ export default function App() {
         // Load fonts, images, etc.
         setIsReady(true);
       } catch (e) {
-        console.warn(e);
+        // Initialization failed - set ready anyway to avoid blocking
+        setIsReady(true);
       }
     }
 

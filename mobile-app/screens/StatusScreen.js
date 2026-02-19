@@ -15,6 +15,7 @@ import {
   SafeAreaView,
   Image,
 } from 'react-native';
+import config from '../config';
 
 const StatusScreen = ({ route, navigation }) => {
   const { submissionId } = route.params;
@@ -38,7 +39,7 @@ const StatusScreen = ({ route, navigation }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/submission/${submissionId}`
+        `${config.apiBaseUrl}/submission/${submissionId}`
       );
 
       if (!response.ok) {

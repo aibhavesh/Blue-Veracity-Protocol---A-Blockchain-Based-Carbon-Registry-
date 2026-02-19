@@ -16,6 +16,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
+import config from '../config';
 
 const SubmitScreen = ({ route, navigation }) => {
   const { photo, latitude, longitude, accuracy } = route.params;
@@ -44,8 +45,8 @@ const SubmitScreen = ({ route, navigation }) => {
 
   const handleSubmit = async () => {
     // Validate inputs
-    if (!walletAddress || !walletAddress.startsWith('0x')) {
-      Alert.alert('Error', 'Please enter a valid Ethereum address');
+    if (!walletAddress || !walletAddress.startsWith('0x') || walletAddress.length !== 42) {
+      Alert.alert('Error', 'Please enter a valid Ethereum address (42 characters starting with 0x)');
       return;
     }
 
@@ -68,8 +69,8 @@ const SubmitScreen = ({ route, navigation }) => {
       formData.append('wallet_address', walletAddress);
       formData.append('credits_amount', parseFloat(creditsAmount));
 
-      // Submit to backend
-      const response = await fetch('http://localhost:8000/submit', {
+      // Submit to backend using config
+      const response = await fetch(`${config.apiBaseUrl}/submit`, {
         method: 'POST',
         body: formData,
       });
